@@ -1,0 +1,44 @@
+services:
+  quickfixj-spring-boot-server:
+    build:
+      context: ./server/.
+      dockerfile: ./Dockerfile
+    environment:
+      JAVA_OPTS: "-agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n -Xmx512m -Xms512m -Dspring.profiles.active=docker"
+      QUICKFIXJ_SERVER_CONFIG_FILE: "file:/opt/app/quickfixj-server.cfg"
+      JAVA_TOOL_OPTIONS: -DJdbcURL=jdbc:mysql://mysqldb-server:3306/quickfix
+    volumes:
+      - ./configs/quickfixj-server.cfg:/opt/app/quickfixj-server.cfg
+    depends_on:
+      mysqldb-server:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "9880:9880"
+      - "9881:9881"
+      - "9876:9876"
+      - "8080:8080"
+    networks:
+      - net
+
+  mysqldb-server:
+    image: mysql/mysql-server:8.0.32
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: quickfix
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testuser
+    volumes:
+      - mysql-server-data:/var/lib/mysql
+      - ./mysql:/docker-entrypoint-initdb.d
+    restart: always
+    networks:
+      - net
+
+volumes:
+  mysql-server-data:
+
+networks:
+  net:
